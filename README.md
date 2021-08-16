@@ -1,0 +1,34 @@
+# m5stickc-temperature-alert
+
+M5StickC で気温を監視し、閾値を超えたら Slack へアラートメッセージを送信
+
+## 機能
+
+- 10秒ごとに温度を測定し、閾値を超えたら Slack へアラートメッセージを送信 (測定間隔は変更可)
+- 1時間1回記録した温度を1日1回決められた時刻に Slack へ送信
+- 停電等によりバッテリーでの稼働に切り替わった場合 Slack へメッセージを送信
+  (通信経路となる機器も UPS 等で電源が確保されている必要があります。)
+
+## secrets.h の作成
+
+secrets.h という名前でファイルを作成し
+Wi-Fi の SSID とパスフレーズ、Slack のエンドポイントのパスを
+書き込んでおく必要があります。
+
+    // Wi-FiのSSID
+    const char* WIFI_SSID = "Wi-FiのSSID";
+    // Wi-Fiのパスフレーズ
+    const char* WIFI_PASSPHRASE = "Wi-Fiのパスフレーズ";
+    // Incoming Webhook URLのパス
+    const char* WEBHOOK_PATH = "/services/xxxxx/xxxxx/xxxxx";
+
+## SHT30 の利用に必要なファイル
+
+以下のファイルを同じフォルダに置いてください。
+
+- SHT3X.cpp
+- SHT3X.h
+
+スケッチ例の ENVII_SHT30_BMP280 フォルダからコピーするか、
+<https://github.com/m5stack/M5StickC/tree/master/examples/Unit/ENVII_SHT30_BMP280>
+からダウンロードできます。
