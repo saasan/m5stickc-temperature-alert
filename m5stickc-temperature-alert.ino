@@ -112,7 +112,7 @@ void getTemp() {
 void sendCurrentTemp() {
     std::ostringstream message;
     message << "現在の温度は"
-            << std::fixed << std::setprecision(1) << temp
+            << std::fixed << std::setprecision(2) << temp
             << "度です。";
     postMessage(message.str().c_str());
 }
@@ -127,7 +127,7 @@ void sendAlertMessage() {
         if (!message_sent) {
             std::ostringstream message;
             message << "<!here> 温度が閾値を超えました！現在の温度は"
-                    << std::fixed << std::setprecision(1) << temp
+                    << std::fixed << std::setprecision(2) << temp
                     << "度です。";
             postMessage(message.str().c_str());
 
@@ -140,7 +140,7 @@ void sendAlertMessage() {
 
             std::ostringstream message;
             message << "温度が正常値に戻りました。現在の温度は"
-                    << std::fixed << std::setprecision(1) << temp
+                    << std::fixed << std::setprecision(2) << temp
                     << "度です。";
             postMessage(message.str().c_str());
 
@@ -169,7 +169,7 @@ void sendDailyMessage() {
             message << now.tm_mon << "月"
                     << now.tm_mday << "日"
                     << now.tm_hour << "時: "
-                    << std::fixed << std::setprecision(1) << temp
+                    << std::fixed << std::setprecision(2) << temp
                     << "度\\n";
 
             Serial.println(message.str().c_str());
@@ -243,9 +243,9 @@ void setup() {
     // 起動メッセージを送信
     std::ostringstream message;
     message << "起動しました。アラートの閾値は"
-            << std::fixed << std::setprecision(1) << TEMP_THRESHOLD
+            << std::fixed << std::setprecision(2) << TEMP_THRESHOLD
             << "度、現在の温度は"
-            << std::fixed << std::setprecision(1) << temp
+            << std::fixed << std::setprecision(2) << temp
             << "度です。";
     postMessage(message.str().c_str());
 }
