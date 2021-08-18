@@ -166,11 +166,12 @@ void sendDailyMessage() {
     if (now.tm_min == 0) {
         // 1時間1回のメッセージを作成していなければ作成
         if (!hourly_processed) {
-            message << (now.tm_mon + 1) << "月"
-                    << now.tm_mday << "日"
-                    << now.tm_hour << "時: "
-                    << std::fixed << std::setprecision(2) << temp
-                    << "度\\n";
+            message << (now.tm_year + 1900) << "-" << std::setfill('0')
+                    << std::setw(2) << (now.tm_mon + 1) << "-"
+                    << std::setw(2) << now.tm_mday << " "
+                    << std::setw(2) << now.tm_hour << ":"
+                    << std::setw(2) << now.tm_min << ": "
+                    << std::fixed << std::setprecision(2) << temp << "\\n";
 
             Serial.println(message.str().c_str());
             hourly_processed = true;
