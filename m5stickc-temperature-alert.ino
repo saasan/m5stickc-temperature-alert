@@ -166,7 +166,7 @@ void sendDailyMessage() {
     if (now.tm_min == 0) {
         // 1時間1回のメッセージを作成していなければ作成
         if (!hourly_processed) {
-            message << now.tm_mon << "月"
+            message << (now.tm_mon + 1) << "月"
                     << now.tm_mday << "日"
                     << now.tm_hour << "時: "
                     << std::fixed << std::setprecision(2) << temp
