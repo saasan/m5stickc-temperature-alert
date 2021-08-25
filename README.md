@@ -34,6 +34,6 @@ Wi-Fi の SSID とパスフレーズ、Slack のエンドポイントのパス�
 - SHT3X.cpp
 - SHT3X.h
 
-スケッチ例の ENVII_SHT30_BMP280 フォルダからコピーするか、
-<https://github.com/m5stack/M5StickC/tree/master/examples/Unit/ENVII_SHT30_BMP280>
+Arduino/libraries/UNIT_ENV/src/ フォルダからコピーするか、
+<https://github.com/m5stack/UNIT_ENV/tree/master/src>
 からダウンロードできます。
