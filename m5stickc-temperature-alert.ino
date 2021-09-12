@@ -170,7 +170,7 @@ void sendDailyMessage() {
                     << std::setw(2) << (now.tm_mon + 1) << "-"
                     << std::setw(2) << now.tm_mday << " "
                     << std::setw(2) << now.tm_hour << ":"
-                    << std::setw(2) << now.tm_min << ": "
+                    << std::setw(2) << now.tm_min << " "
                     << std::fixed << std::setprecision(2) << temp << "\\n";
 
             Serial.println(message.str().c_str());
