@@ -2,10 +2,8 @@
 #include <sstream>
 #include <iomanip>
 #include <M5StickC.h>
-#include <Wire.h>
-#include <WiFi.h>
+#include <SHT3X.h>
 #include <WiFiClientSecure.h>
-#include "SHT3X.h"
 #include "secrets.h"
 
 // -----------------------------------------------------------------------------

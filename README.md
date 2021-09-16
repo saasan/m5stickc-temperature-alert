@@ -26,14 +26,3 @@ Wi-Fi の SSID とパスフレーズ、Slack のエンドポイントのパス�
     const char* WIFI_PASSPHRASE = "Wi-Fiのパスフレーズ";
     // Incoming Webhook URLのパス
     const char* WEBHOOK_PATH = "/services/xxxxx/xxxxx/xxxxx";
-
-## SHT30 の利用に必要なファイル
-
-以下のファイルを同じフォルダに置いてください。
-
-- SHT3X.cpp
-- SHT3X.h
-
-Arduino/libraries/UNIT_ENV/src/ フォルダからコピーするか、
-<https://github.com/m5stack/UNIT_ENV/tree/master/src>
-からダウンロードできます。
