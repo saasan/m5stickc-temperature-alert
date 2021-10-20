@@ -8,3 +8,4 @@ BreakBeforeBraces: Custom
 BraceWrapping:
     BeforeElse: true
     BeforeCatch: true
+Cpp11BracedListStyle: false
