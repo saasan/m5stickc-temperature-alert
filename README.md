@@ -5,7 +5,7 @@ M5StickC で気温を監視し、閾値を超えたら Slack へアラートメ�
 ## 必要なもの
 
 - M5StickC
-- M5Stack用環境センサユニット ver.2 (ENV II)
+- M5Stack用環境センサユニット ver.2 (ENV II) または M5Stack用温湿度気圧センサユニット Ver.3 (ENV III)
 
 ## 機能
 
