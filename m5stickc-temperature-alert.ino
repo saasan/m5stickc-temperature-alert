@@ -17,6 +17,12 @@ const float TEMP_THRESHOLD = 27.00;
 const char* WEBHOOK_HOST = "hooks.slack.com";
 // Incoming Webhookのポート番号
 const uint16_t WEBHOOK_PORT = 443;
+// グラフのURL(二重にURLエンコードする必要がある)
+const char* CHART_URL[] = {
+    "https%3A%2F%2Fquickchart.io%2Fchart%3Fwidth%3D640%26height%3D360%26backgroundColor%3Drgb(255%252C255%252C255)%26c%3D%257B%2522type%2522%253A%2522line%2522%252C%2522data%2522%253A%257B%2522labels%2522%253A%255B",
+    "%255D%252C%2522datasets%2522%253A%255B%257B%2522label%2522%253A%2522%25E6%25B8%25A9%25E5%25BA%25A6%2522%252C%2522data%2522%253A%255B",
+    "%255D%252C%2522fill%2522%253Afalse%257D%255D%257D%252C%2522options%2522%253A%257B%2522scales%2522%253A%257B%2522yAxes%2522%253A%255B%257B%2522ticks%2522%253A%257B%2522min%2522%253A20%252C%2522max%2522%253A30%257D%257D%255D%257D%257D%257D"
+};
 // GMTからの時間差(秒)
 const long JST = 9 * 60 * 60;
 // NTPサーバ
@@ -95,6 +101,10 @@ void postMessage(const char* message) {
                 break;
             }
         }
+        while (client.available()) {
+            char c = client.read();
+            Serial.write(c);
+        }
 
         client.stop();
     }
@@ -154,8 +164,10 @@ void sendAlertMessage() {
 
 // 1日1回温度を送信
 void sendDailyMessage() {
-    // 1日1回送信するメッセージ
-    static std::ostringstream message;
+    // 1日1回送信するメッセージの日時部分
+    static std::ostringstream message_date;
+    // 1日1回送信するメッセージの温度部分
+    static std::ostringstream message_temp;
     // 1日1回送信済みならtrue
     static bool daily_sent = false;
     // 1時間1回のメッセージ作成済みならtrue
@@ -169,14 +181,18 @@ void sendDailyMessage() {
     if (now.tm_min == 0) {
         // 1時間1回のメッセージを作成していなければ作成
         if (!hourly_processed) {
-            message << (now.tm_year + 1900) << "-" << std::setfill('0')
-                    << std::setw(2) << (now.tm_mon + 1) << "-"
-                    << std::setw(2) << now.tm_mday << " "
-                    << std::setw(2) << now.tm_hour << ":"
-                    << std::setw(2) << now.tm_min << " "
-                    << std::fixed << std::setprecision(2) << temp << "\\n";
+            // 日時 (例:「"08/20 11:00",」)
+            message_date << std::setfill('0') << std::right << "%2522"
+                         << std::setw(2) << (now.tm_mon + 1) << "%252F"
+                         << std::setw(2) << now.tm_mday << "%2520"
+                         << std::setw(2) << now.tm_hour << "%253A"
+                         << std::setw(2) << now.tm_min << "%2522%252C";
 
-            Serial.println(message.str().c_str());
+            // 温度 (例:「25.88,」)
+            message_temp << std::fixed << std::setprecision(2) << temp << "%252C";
+
+            Serial.println(message_date.str().c_str());
+            Serial.println(message_temp.str().c_str());
             hourly_processed = true;
         }
     }
@@ -187,11 +203,22 @@ void sendDailyMessage() {
     if (now.tm_hour == DAILY_HOUR && now.tm_min == DAILY_MIN) {
         // 1日1回送信していなければメッセージを送信
         if (!daily_sent) {
+            // 1日1回送信するメッセージ
+            std::ostringstream message;
+
+            // グラフのURLを作成
+            message << CHART_URL[0] << message_date.str().c_str()
+                    << CHART_URL[1] << message_temp.str().c_str()
+                    << CHART_URL[2];
+
+            // メッセージを送信
             postMessage(message.str().c_str());
 
-            // messageをクリア
-            message.str("");
-            message.clear(std::stringstream::goodbit);
+            // 日時と温度をクリア
+            message_date.str("");
+            message_date.clear(std::stringstream::goodbit);
+            message_temp.str("");
+            message_temp.clear(std::stringstream::goodbit);
 
             daily_sent = true;
         }
