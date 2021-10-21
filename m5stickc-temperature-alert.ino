@@ -232,19 +232,34 @@ void sendDailyMessage() {
 void sendBatteryMessage() {
     // バッテリー稼働での警告を送信済みならtrue
     static bool battery_sent = false;
+    // 送信するメッセージ
+    std::ostringstream message;
+    std::ostringstream message_current;
 
     // バッテリーの充放電電流を取得
     float bat_current = M5.Axp.GetBatCurrent();
+    // USB電源の電流を取得
+    float vbus_current = M5.Axp.GetVBusCurrent();
 
-    if (bat_current < 0) {
+    message_current << "バッテリー電流: "
+                    << std::fixed << std::setprecision(2) << bat_current << " mA\\n"
+                    << "USB電源電流: "
+                    << std::fixed << std::setprecision(2) << vbus_current << " mA";
+    Serial.println(message_current.str().c_str());
+
+    if (bat_current < 0 && vbus_current <= 0) {
         if (!battery_sent) {
-            postMessage("<!here> バッテリーでの稼働に切り替わりました。電源を確認してください。");
+            message << "<!here> バッテリーでの稼働に切り替わりました。電源を確認してください。\\n"
+                    << message_current.str();
+            postMessage(message.str().c_str());
             battery_sent = true;
         }
     }
     else {
         if (battery_sent) {
-            postMessage("電源に接続されました。");
+            message << "電源に接続されました。\\n"
+                    << message_current.str();
+            postMessage(message.str().c_str());
             battery_sent = false;
         }
     }
