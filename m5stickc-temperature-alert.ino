@@ -4,6 +4,7 @@
 #include <M5StickC.h>
 #include <SHT3X.h>
 #include <WiFiClientSecure.h>
+#include "encodeURIComponent.h"
 #include "secrets.h"
 
 // -----------------------------------------------------------------------------
@@ -17,11 +18,13 @@ const float TEMP_THRESHOLD = 27.00;
 const char* WEBHOOK_HOST = "hooks.slack.com";
 // Incoming Webhookのポート番号
 const uint16_t WEBHOOK_PORT = 443;
-// グラフのURL(二重にURLエンコードする必要がある)
-const char* CHART_URL[] = {
-    "https%3A%2F%2Fquickchart.io%2Fchart%3Fwidth%3D640%26height%3D360%26backgroundColor%3Drgb(255%252C255%252C255)%26c%3D%257B%2522type%2522%253A%2522line%2522%252C%2522data%2522%253A%257B%2522labels%2522%253A%255B",
-    "%255D%252C%2522datasets%2522%253A%255B%257B%2522label%2522%253A%2522%25E6%25B8%25A9%25E5%25BA%25A6%2522%252C%2522data%2522%253A%255B",
-    "%255D%252C%2522fill%2522%253Afalse%257D%255D%257D%252C%2522options%2522%253A%257B%2522scales%2522%253A%257B%2522yAxes%2522%253A%255B%257B%2522ticks%2522%253A%257B%2522min%2522%253A20%252C%2522max%2522%253A30%257D%257D%255D%257D%257D%257D"
+// グラフのURL
+const char* CHART_URL = "https://quickchart.io/chart?width=640&height=360&backgroundColor=rgb(255%2C255%2C255)&c=";
+// グラフのJSON
+const char* CHART_JSON[] = {
+    R"({"type":"line","data":{"labels":[)",
+    R"(],"datasets":[{"label":"温度","data":[)",
+    R"(],"fill":false}]},"options":{"scales":{"yAxes":[{"ticks":{"min":20,"max":30}}]}}})"
 };
 // GMTからの時間差(秒)
 const long JST = 9 * 60 * 60;
@@ -79,8 +82,9 @@ void postMessage(const char* message) {
         Serial.println("Connected to server!");
 
         // リクエストを作成
-        std::ostringstream payload, request;
-        payload << "payload={\"text\": \"" << message << "\"}";
+        std::ostringstream encoded_message, payload, request;
+        encodeURIComponent(message, encoded_message);
+        payload << "payload={\"text\": \"" << encoded_message.str() << "\"}";
         request << "POST " << WEBHOOK_PATH << " HTTP/1.1\r\n"
                 << "Host: " << WEBHOOK_HOST << "\r\n"
                 << "User-Agent: WiFiClientSecure\r\n"
@@ -182,14 +186,14 @@ void sendDailyMessage() {
         // 1時間1回のメッセージを作成していなければ作成
         if (!hourly_processed) {
             // 日時 (例:「"08/20 11:00",」)
-            message_date << std::setfill('0') << std::right << "%2522"
-                         << std::setw(2) << (now.tm_mon + 1) << "%252F"
-                         << std::setw(2) << now.tm_mday << "%2520"
-                         << std::setw(2) << now.tm_hour << "%253A"
-                         << std::setw(2) << now.tm_min << "%2522%252C";
+            message_date << std::setfill('0') << std::right << "\""
+                         << std::setw(2) << (now.tm_mon + 1) << "/"
+                         << std::setw(2) << now.tm_mday << " "
+                         << std::setw(2) << now.tm_hour << ":"
+                         << std::setw(2) << now.tm_min << "\",";
 
             // 温度 (例:「25.88,」)
-            message_temp << std::fixed << std::setprecision(2) << temp << "%252C";
+            message_temp << std::fixed << std::setprecision(2) << temp << ",";
 
             Serial.println(message_date.str().c_str());
             Serial.println(message_temp.str().c_str());
@@ -203,16 +207,22 @@ void sendDailyMessage() {
     if (now.tm_hour == DAILY_HOUR && now.tm_min == DAILY_MIN) {
         // 1日1回送信していなければメッセージを送信
         if (!daily_sent) {
-            // 1日1回送信するメッセージ
-            std::ostringstream message;
+            // グラフのURL
+            std::ostringstream url;
+            // グラフのJSON
+            std::ostringstream json;
+
+            // グラフのJSONを作成
+            json << CHART_JSON[0] << message_date.str()
+                 << CHART_JSON[1] << message_temp.str()
+                 << CHART_JSON[2];
 
             // グラフのURLを作成
-            message << CHART_URL[0] << message_date.str().c_str()
-                    << CHART_URL[1] << message_temp.str().c_str()
-                    << CHART_URL[2];
+            url << CHART_URL;
+            encodeURIComponent(json.str().c_str(), url);
 
             // メッセージを送信
-            postMessage(message.str().c_str());
+            postMessage(url.str().c_str());
 
             // 日時と温度をクリア
             message_date.str("");
