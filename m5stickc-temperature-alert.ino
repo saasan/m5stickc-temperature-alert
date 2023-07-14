@@ -68,11 +68,10 @@ void postMessage(const char* message) {
     WiFiClientSecure client;
 
     // HTTPS接続時に証明書による検証を行わない。
-    // ボードマネージャで表示されるM5Stackのバージョンが1.0.8の場合は
-    // client.setInsecure()を呼び出す必要がある。
-    // 1.0.8の場合は以下のコメントをはずすこと。
-    // 1.0.9の場合は不要。(setInsecureが存在しないためコンパイルエラーとなる)
-    // client.setInsecure();
+    // ボードマネージャで表示されるM5Stackのバージョンが1.0.9の場合は
+    // client.setInsecure();をコメントアウトする必要がある。
+    // (setInsecureが存在しないためコンパイルエラーとなる)
+    client.setInsecure();
 
     Serial.println("\nStarting connection to server...");
     if (!client.connect(WEBHOOK_HOST, WEBHOOK_PORT)) {
