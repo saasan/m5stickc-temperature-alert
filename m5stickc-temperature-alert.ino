@@ -171,6 +171,26 @@ void sendAlertMessage() {
     }
 }
 
+// グラフを送信
+void sendChart(const char* message_date, const char* message_temp) {
+    // グラフのURL
+    std::ostringstream url;
+    // グラフのJSON
+    std::ostringstream json;
+
+    // グラフのJSONを作成
+    json << CHART_JSON[0] << message_date
+         << CHART_JSON[1] << message_temp
+         << CHART_JSON[2];
+
+    // グラフのURLを作成
+    url << CHART_URL;
+    encodeURIComponent(json.str().c_str(), url);
+
+    // メッセージを送信
+    postMessage(url.str().c_str());
+}
+
 // 1日1回温度を送信
 void sendDailyMessage() {
     // 1日1回送信するメッセージの日時部分
@@ -212,22 +232,8 @@ void sendDailyMessage() {
     if (now.tm_hour == DAILY_HOUR && now.tm_min == DAILY_MIN) {
         // 1日1回送信していなければメッセージを送信
         if (!daily_sent) {
-            // グラフのURL
-            std::ostringstream url;
-            // グラフのJSON
-            std::ostringstream json;
-
-            // グラフのJSONを作成
-            json << CHART_JSON[0] << message_date.str()
-                 << CHART_JSON[1] << message_temp.str()
-                 << CHART_JSON[2];
-
-            // グラフのURLを作成
-            url << CHART_URL;
-            encodeURIComponent(json.str().c_str(), url);
-
-            // メッセージを送信
-            postMessage(url.str().c_str());
+            // グラフを送信
+            sendChart(message_date.str().c_str(), message_temp.str().c_str());
 
             // 日時と温度をクリア
             message_date.str("");
