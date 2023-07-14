@@ -23,8 +23,9 @@ const char* CHART_URL = "https://quickchart.io/chart?width=640&height=360&backgr
 // グラフのJSON
 const char* CHART_JSON[] = {
     R"({"type":"line","data":{"labels":[)",
-    R"(],"datasets":[{"label":"温度","data":[)",
-    R"(],"fill":false}]},"options":{"scales":{"yAxes":[{"ticks":{"min":20,"max":30}}]}}})"
+    R"(],"datasets":[{"label":"温度","yAxisID":"t","data":[)",
+    R"(],"fill":false },{"label":"湿度","yAxisID":"h","data":[)",
+    R"(],"fill":false }]},"options":{"scales":{"yAxes":[{"id":"t","display":true,"position":"left","ticks":{"min":20,"max":40 },"scaleLabel":{"display":true,"labelString":"温度"}},{"id":"h","display":true,"position":"right","ticks":{"min":0,"max":100 },"scaleLabel":{"display":true,"labelString":"湿度"}}]}}})"
 };
 // GMTからの時間差(秒)
 const long JST = 9 * 60 * 60;
@@ -44,6 +45,8 @@ const uint8_t AXP_WAS_PRESSED = 2;
 SHT3X sht30;
 // 温度
 float temp = 0.0;
+// 湿度
+float hum = 0.0;
 
 // -----------------------------------------------------------------------------
 // 関数
@@ -119,23 +122,26 @@ void postMessage(const char* message) {
     }
 }
 
-// 温度を取得
-void getTemp() {
+// 温湿度を取得
+void getTempHum() {
     if (sht30.get() == 0) {
         temp = sht30.cTemp;
-        Serial.printf("Temperature: %2.2f*C\r\n", temp);
+        hum = sht30.humidity;
+        Serial.printf("Temperature: %2.2f*C, Humidity: %2.2f%%\r\n", temp, hum);
     }
     else {
         Serial.println("sht30.get() failed");
     }
 }
 
-// 現在の温度を送信
-void sendCurrentTemp() {
+// 現在の温湿度を送信
+void sendCurrentTempHum() {
     std::ostringstream message;
     message << "現在の温度は"
             << std::fixed << std::setprecision(2) << temp
-            << "度です。";
+            << "度、湿度は"
+            << std::fixed << std::setprecision(2) << hum
+            << "%です。";
     postMessage(message.str().c_str());
 }
 
@@ -172,7 +178,7 @@ void sendAlertMessage() {
 }
 
 // グラフを送信
-void sendChart(const char* message_date, const char* message_temp) {
+void sendChart(const char* message_date, const char* message_temp, const char* message_hum) {
     // グラフのURL
     std::ostringstream url;
     // グラフのJSON
@@ -181,7 +187,8 @@ void sendChart(const char* message_date, const char* message_temp) {
     // グラフのJSONを作成
     json << CHART_JSON[0] << message_date
          << CHART_JSON[1] << message_temp
-         << CHART_JSON[2];
+         << CHART_JSON[2] << message_hum
+         << CHART_JSON[3];
 
     // グラフのURLを作成
     url << CHART_URL;
@@ -191,12 +198,14 @@ void sendChart(const char* message_date, const char* message_temp) {
     postMessage(url.str().c_str());
 }
 
-// 1日1回温度を送信
+// 1日1回温湿度を送信
 void sendDailyMessage() {
     // 1日1回送信するメッセージの日時部分
     static std::ostringstream message_date;
     // 1日1回送信するメッセージの温度部分
     static std::ostringstream message_temp;
+    // 1日1回送信するメッセージの湿度部分
+    static std::ostringstream message_hum;
     // 1日1回送信済みならtrue
     static bool daily_sent = false;
     // 1時間1回のメッセージ作成済みならtrue
@@ -219,9 +228,12 @@ void sendDailyMessage() {
 
             // 温度 (例:「25.88,」)
             message_temp << std::fixed << std::setprecision(2) << temp << ",";
+            // 湿度 (例:「25.88,」)
+            message_hum << std::fixed << std::setprecision(2) << hum << ",";
 
             Serial.println(message_date.str().c_str());
             Serial.println(message_temp.str().c_str());
+            Serial.println(message_hum.str().c_str());
             hourly_processed = true;
         }
     }
@@ -233,13 +245,15 @@ void sendDailyMessage() {
         // 1日1回送信していなければメッセージを送信
         if (!daily_sent) {
             // グラフを送信
-            sendChart(message_date.str().c_str(), message_temp.str().c_str());
+            sendChart(message_date.str().c_str(), message_temp.str().c_str(), message_hum.str().c_str());
 
             // 日時と温度をクリア
             message_date.str("");
             message_date.clear(std::stringstream::goodbit);
             message_temp.str("");
             message_temp.clear(std::stringstream::goodbit);
+            message_hum.str("");
+            message_hum.clear(std::stringstream::goodbit);
 
             daily_sent = true;
         }
@@ -304,8 +318,8 @@ void setup() {
     // NTPの設定
     configTime(JST, 0, NTP_SERVER);
 
-    // 温度を取得
-    getTemp();
+    // 温湿度を取得
+    getTempHum();
 
     // 起動メッセージを送信
     std::ostringstream message;
@@ -313,7 +327,9 @@ void setup() {
             << std::fixed << std::setprecision(2) << TEMP_THRESHOLD
             << "度、現在の温度は"
             << std::fixed << std::setprecision(2) << temp
-            << "度です。";
+            << "度、湿度は"
+            << std::fixed << std::setprecision(2) << hum
+            << "%です。";
     postMessage(message.str().c_str());
 }
 
@@ -329,8 +345,8 @@ void loop() {
     // 無線LANが切れていたら再接続
     reconnectWiFi(WIFI_SSID, WIFI_PASSPHRASE);
 
-    // 温度を取得
-    getTemp();
+    // 温湿度を取得
+    getTempHum();
 
     M5.Lcd.fillScreen(TFT_BLACK);
     M5.Lcd.setCursor(5, 30);
@@ -338,12 +354,12 @@ void loop() {
     M5.Lcd.printf("Temp: %2.2f", temp);
 
     if (M5.BtnA.wasPressed()) {
-        // ボタンAが押されたら温度を送信
+        // ボタンAが押されたら温湿度を送信
         Serial.println("M5.BtnA.wasPressed");
-        sendCurrentTemp();
+        sendCurrentTempHum();
     }
 
-    // 1日1回温度を送信
+    // 1日1回温湿度を送信
     sendDailyMessage();
     // 現在の温度が閾値を超えていればメッセージを送信
     sendAlertMessage();
