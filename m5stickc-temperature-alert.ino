@@ -63,6 +63,12 @@ void connectWiFi(const char* ssid, const char* passphrase) {
     Serial.println(WIFI_SSID);
 }
 
+// 無線LANが切れていたら再接続
+void reconnectWiFi(const char* ssid, const char* passphrase) {
+    if (WiFi.status() == WL_CONNECTED) return;
+    connectWiFi(ssid, passphrase);
+}
+
 // Slackへメッセージを送信する
 void postMessage(const char* message) {
     WiFiClientSecure client;
@@ -313,6 +319,9 @@ void loop() {
     if (M5.Axp.GetBtnPress() == AXP_WAS_PRESSED) {
         esp_restart();
     }
+
+    // 無線LANが切れていたら再接続
+    reconnectWiFi(WIFI_SSID, WIFI_PASSPHRASE);
 
     // 温度を取得
     getTemp();
