@@ -1,11 +1,22 @@
-#include <string>
-#include <sstream>
 #include <iomanip>
+#include <sstream>
+#include <string>
+#include <vector>
 #include <M5StickC.h>
 #include <SHT3X.h>
 #include <WiFiClientSecure.h>
 #include "encodeURIComponent.h"
 #include "secrets.h"
+
+// -----------------------------------------------------------------------------
+// 構造体
+// -----------------------------------------------------------------------------
+
+struct dataset {
+    float temp;
+    float hum;
+    std::string date;
+};
 
 // -----------------------------------------------------------------------------
 // 定数
@@ -122,6 +133,35 @@ void postMessage(const char* message) {
     }
 }
 
+// tmを MM/dd HH:mm 形式の文字列へ変換
+std::string tm2str(struct tm& t) {
+    std::ostringstream ss;
+    ss << std::setfill('0') << std::right
+       << std::setw(2) << (t.tm_mon + 1) << "/"
+       << std::setw(2) << t.tm_mday << " "
+       << std::setw(2) << t.tm_hour << ":"
+       << std::setw(2) << t.tm_min;
+
+    return ss.str();
+}
+
+// std::vector<dataset>をJSON形式の文字列へ変換
+void dataset2json(const std::vector<dataset>& v, std::ostringstream& json) {
+    std::ostringstream ss_date, ss_temp, ss_hum;
+
+    for (const auto& i: v) {
+        ss_date << "\"" <<  i.date << "\",";
+        // 小数点以下2桁
+        ss_temp << std::fixed << std::setprecision(2) <<  i.temp << ",";
+        ss_hum << std::fixed << std::setprecision(2) <<  i.hum << ",";
+    }
+
+    json << CHART_JSON[0] << ss_date.str()
+         << CHART_JSON[1] << ss_temp.str()
+         << CHART_JSON[2] << ss_hum.str()
+         << CHART_JSON[3];
+}
+
 // 温湿度を取得
 void getTempHum() {
     if (sht30.get() == 0) {
@@ -178,17 +218,14 @@ void sendAlertMessage() {
 }
 
 // グラフを送信
-void sendChart(const char* message_date, const char* message_temp, const char* message_hum) {
+void sendChart(const std::vector<dataset>& datasets) {
     // グラフのURL
     std::ostringstream url;
     // グラフのJSON
     std::ostringstream json;
 
     // グラフのJSONを作成
-    json << CHART_JSON[0] << message_date
-         << CHART_JSON[1] << message_temp
-         << CHART_JSON[2] << message_hum
-         << CHART_JSON[3];
+    dataset2json(datasets, json);
 
     // グラフのURLを作成
     url << CHART_URL;
@@ -200,12 +237,8 @@ void sendChart(const char* message_date, const char* message_temp, const char* m
 
 // 1日1回温湿度を送信
 void sendDailyMessage() {
-    // 1日1回送信するメッセージの日時部分
-    static std::ostringstream message_date;
-    // 1日1回送信するメッセージの温度部分
-    static std::ostringstream message_temp;
-    // 1日1回送信するメッセージの湿度部分
-    static std::ostringstream message_hum;
+    // グラフ化するデータセット
+    static std::vector<dataset> datasets(24);
     // 1日1回送信済みならtrue
     static bool daily_sent = false;
     // 1時間1回のメッセージ作成済みならtrue
@@ -217,23 +250,14 @@ void sendDailyMessage() {
     getLocalTime(&now);
 
     if (now.tm_min == 0) {
-        // 1時間1回のメッセージを作成していなければ作成
+        // 1時間1回のデータを作成していなければ作成
         if (!hourly_processed) {
-            // 日時 (例:「"08/20 11:00",」)
-            message_date << std::setfill('0') << std::right << "\""
-                         << std::setw(2) << (now.tm_mon + 1) << "/"
-                         << std::setw(2) << now.tm_mday << " "
-                         << std::setw(2) << now.tm_hour << ":"
-                         << std::setw(2) << now.tm_min << "\",";
+            // 24時間分ある場合は削除
+            if (datasets.size() > 23) datasets.erase(datasets.begin());
 
-            // 温度 (例:「25.88,」)
-            message_temp << std::fixed << std::setprecision(2) << temp << ",";
-            // 湿度 (例:「25.88,」)
-            message_hum << std::fixed << std::setprecision(2) << hum << ",";
+            dataset new_data { temp, hum, tm2str(now) };
+            datasets.push_back(new_data);
 
-            Serial.println(message_date.str().c_str());
-            Serial.println(message_temp.str().c_str());
-            Serial.println(message_hum.str().c_str());
             hourly_processed = true;
         }
     }
@@ -245,15 +269,7 @@ void sendDailyMessage() {
         // 1日1回送信していなければメッセージを送信
         if (!daily_sent) {
             // グラフを送信
-            sendChart(message_date.str().c_str(), message_temp.str().c_str(), message_hum.str().c_str());
-
-            // 日時と温度をクリア
-            message_date.str("");
-            message_date.clear(std::stringstream::goodbit);
-            message_temp.str("");
-            message_temp.clear(std::stringstream::goodbit);
-            message_hum.str("");
-            message_hum.clear(std::stringstream::goodbit);
+            sendChart(datasets);
 
             daily_sent = true;
         }
