@@ -256,7 +256,7 @@ void sendChart(const std::vector<dataset>& datasets) {
 // 1日1回温湿度を送信
 void sendDailyMessage() {
     // グラフ化するデータセット
-    static std::vector<dataset> datasets(25);
+    static std::vector<dataset> datasets;
     // 1日1回送信済みならtrue
     static bool daily_sent = false;
     // 1時間1回のメッセージ作成済みならtrue
