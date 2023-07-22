@@ -238,7 +238,7 @@ void sendChart(const std::vector<dataset>& datasets) {
 // 1日1回温湿度を送信
 void sendDailyMessage() {
     // グラフ化するデータセット
-    static std::vector<dataset> datasets(24);
+    static std::vector<dataset> datasets(25);
     // 1日1回送信済みならtrue
     static bool daily_sent = false;
     // 1時間1回のメッセージ作成済みならtrue
@@ -252,8 +252,8 @@ void sendDailyMessage() {
     if (now.tm_min == 0) {
         // 1時間1回のデータを作成していなければ作成
         if (!hourly_processed) {
-            // 24時間分ある場合は削除
-            if (datasets.size() > 23) datasets.erase(datasets.begin());
+            // 25時間分ある場合は削除
+            if (datasets.size() >= 25) datasets.erase(datasets.begin());
 
             dataset new_data { temp, hum, tm2str(now) };
             datasets.push_back(new_data);
