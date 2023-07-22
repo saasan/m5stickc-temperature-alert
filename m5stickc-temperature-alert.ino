@@ -30,13 +30,13 @@ const char* WEBHOOK_HOST = "hooks.slack.com";
 // Incoming Webhookのポート番号
 const uint16_t WEBHOOK_PORT = 443;
 // グラフのURL
-const char* CHART_URL = "https://quickchart.io/chart?width=640&height=360&backgroundColor=rgb(255%2C255%2C255)&c=";
+const char* CHART_URL = "https://quickchart.io/chart?w=720&h=360&bkg=%23FFFFFF&v=4&c=";
 // グラフのJSON
 const char* CHART_JSON[] = {
     R"({"type":"line","data":{"labels":[)",
-    R"(],"datasets":[{"label":"温度","yAxisID":"t","data":[)",
-    R"(],"fill":false },{"label":"湿度","yAxisID":"h","data":[)",
-    R"(],"fill":false }]},"options":{"scales":{"yAxes":[{"id":"t","display":true,"position":"left","ticks":{"min":20,"max":40 },"scaleLabel":{"display":true,"labelString":"温度"}},{"id":"h","display":true,"position":"right","ticks":{"min":0,"max":100 },"scaleLabel":{"display":true,"labelString":"湿度"}}]}}})"
+    R"(],"datasets":[{"label":"温度","yAxisID":"t","borderColor":"#FF9F40","backgroundColor":"#FF9F40","data":[)",
+    R"(]},{"label":"湿度","yAxisID":"h","borderColor":"#36A2EB","backgroundColor":"#36A2EB","data":[)",
+    R"(,]}]},"options":{"scales":{"t":{"title":{"text":"温度","display":true},"position":"left","suggestedMin":20,"suggestedMax":40},"h":{"title":{"text":"湿度","display":true},"position":"left","suggestedMin":0,"suggestedMax":100}}}})"
 };
 // GMTからの時間差(秒)
 const long JST = 9 * 60 * 60;
