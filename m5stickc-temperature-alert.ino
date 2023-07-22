@@ -83,8 +83,8 @@ void reconnectWiFi(const char* ssid, const char* passphrase) {
     connectWiFi(ssid, passphrase);
 }
 
-// Slackへメッセージを送信する
-void postMessage(const char* message) {
+// Slackへ送信する
+void postToSlack(const std::string& payload) {
     WiFiClientSecure client;
 
     // HTTPS接続時に証明書による検証を行わない。
@@ -101,15 +101,13 @@ void postMessage(const char* message) {
         Serial.println("Connected to server!");
 
         // リクエストを作成
-        std::ostringstream encoded_message, payload, request;
-        encodeURIComponent(message, encoded_message);
-        payload << "payload={\"text\": \"" << encoded_message.str() << "\"}";
+        std::ostringstream request;
         request << "POST " << WEBHOOK_PATH << " HTTP/1.1\r\n"
                 << "Host: " << WEBHOOK_HOST << "\r\n"
                 << "User-Agent: WiFiClientSecure\r\n"
                 << "Content-Type: application/x-www-form-urlencoded\r\n"
-                << "Content-Length: " << payload.str().length() << "\r\n\r\n"
-                << payload.str();
+                << "Content-Length: " << payload.length() << "\r\n\r\n"
+                << payload;
 
         Serial.println(request.str().c_str());
 
@@ -131,6 +129,26 @@ void postMessage(const char* message) {
 
         client.stop();
     }
+}
+
+// Slackへメッセージを送信する
+void postMessage(const char* message) {
+    std::ostringstream encoded, payload;
+    encodeURIComponent(message, encoded);
+    payload << R"(payload={"text": ")" << encoded.str() << R"("})";
+
+    postToSlack(payload.str());
+}
+
+// Slackへ画像を送信する
+void postImage(const char* image_url) {
+    std::ostringstream encoded, payload;
+    encodeURIComponent(image_url, encoded);
+    payload << R"(payload={"blocks":[{"type":"image","image_url":")"
+            << encoded.str()
+            << R"(","alt_text":"chart"}]})";
+
+    postToSlack(payload.str());
 }
 
 // tmを MM/dd HH:mm 形式の文字列へ変換
@@ -232,7 +250,7 @@ void sendChart(const std::vector<dataset>& datasets) {
     encodeURIComponent(json.str().c_str(), url);
 
     // メッセージを送信
-    postMessage(url.str().c_str());
+    postImage(url.str().c_str());
 }
 
 // 1日1回温湿度を送信
