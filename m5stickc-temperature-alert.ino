@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <iomanip>
 #include <sstream>
 #include <string>
@@ -7,6 +8,18 @@
 #include <WiFiClientSecure.h>
 #include "encodeURIComponent.h"
 #include "secrets.h"
+
+// -----------------------------------------------------------------------------
+// 設定
+// -----------------------------------------------------------------------------
+// 温度を測定する間隔(秒) ※60秒以上にしないこと
+const uint32_t INTERVAL = 10;
+// アラートメッセージを送信する気温
+const float TEMP_THRESHOLD = 27.00;
+// グラフを送信する時刻の時
+const std::vector<int> SEND_HOUR = { 0, 6, 12, 18 };
+// グラフを送信する時刻の分
+const int SEND_MIN = 0;
 
 // -----------------------------------------------------------------------------
 // 構造体
@@ -21,10 +34,6 @@ struct dataset {
 // -----------------------------------------------------------------------------
 // 定数
 // -----------------------------------------------------------------------------
-// 温度を測定する間隔(秒)
-const uint32_t INTERVAL = 10;
-// アラートメッセージを送信する気温
-const float TEMP_THRESHOLD = 27.00;
 // Incoming Webhook URLのホスト名
 const char* WEBHOOK_HOST = "hooks.slack.com";
 // Incoming Webhookのポート番号
@@ -42,10 +51,6 @@ const char* CHART_JSON[] = {
 const long JST = 9 * 60 * 60;
 // NTPサーバ
 const char* NTP_SERVER = "ntp.nict.jp";
-// 1日1回送信する時刻の時間
-const int DAILY_HOUR = 10;
-// 1日1回送信する時刻の分
-const int DAILY_MIN = 0;
 // 電源ボタンが1秒未満押された
 const uint8_t AXP_WAS_PRESSED = 2;
 
@@ -58,6 +63,8 @@ SHT3X sht30;
 float temp = 0.0;
 // 湿度
 float hum = 0.0;
+// グラフのデータセット
+std::vector<dataset> datasets;
 
 // -----------------------------------------------------------------------------
 // 関数
@@ -253,13 +260,9 @@ void sendChart(const std::vector<dataset>& datasets) {
     postImage(url.str().c_str());
 }
 
-// 1日1回温湿度を送信
-void sendDailyMessage() {
-    // グラフ化するデータセット
-    static std::vector<dataset> datasets;
-    // 1日1回送信済みならtrue
-    static bool daily_sent = false;
-    // 1時間1回のメッセージ作成済みならtrue
+// 1時間1回グラフのデータセットを追加
+void addDatasetHourly() {
+    // 1時間1回のデータを追加済みならtrue
     static bool hourly_processed = false;
     // 現在時刻
     struct tm now;
@@ -268,7 +271,7 @@ void sendDailyMessage() {
     getLocalTime(&now);
 
     if (now.tm_min == 0) {
-        // 1時間1回のデータを作成していなければ作成
+        // 1時間1回のデータを追加していなければ追加
         if (!hourly_processed) {
             // 25時間分ある場合は削除
             if (datasets.size() >= 25) datasets.erase(datasets.begin());
@@ -282,18 +285,28 @@ void sendDailyMessage() {
     else {
         hourly_processed = false;
     }
+}
 
-    if (now.tm_hour == DAILY_HOUR && now.tm_min == DAILY_MIN) {
-        // 1日1回送信していなければメッセージを送信
-        if (!daily_sent) {
-            // グラフを送信
+// 設定時刻の場合にグラフを送信
+void sendChartAtSpecificTime() {
+    // グラフを送信済みならtrue
+    static bool chart_sent = false;
+    // 現在時刻
+    struct tm now;
+
+    // 現在時刻を取得
+    getLocalTime(&now);
+
+    if (now.tm_min == SEND_MIN && std::find(SEND_HOUR.begin(), SEND_HOUR.end(), now.tm_hour) != SEND_HOUR.end()) {
+        // グラフを送信していなければ送信
+        if (!chart_sent) {
             sendChart(datasets);
 
-            daily_sent = true;
+            chart_sent = true;
         }
     }
     else {
-        daily_sent = false;
+        chart_sent = false;
     }
 }
 
@@ -393,8 +406,10 @@ void loop() {
         sendCurrentTempHum();
     }
 
-    // 1日1回温湿度を送信
-    sendDailyMessage();
+    // 1時間1回グラフのデータセットを追加
+    addDatasetHourly();
+    // 設定時刻の場合にグラフを送信
+    sendChartAtSpecificTime();
     // 現在の温度が閾値を超えていればメッセージを送信
     sendAlertMessage();
     // バッテリーの状態を送信
